@@ -1,0 +1,25 @@
+src/App.css
+  7d7ab68b9e4d0dc1 90-91,93-95,98-102,106-112,114,116,118-120,122-123,125-132,134,136
+src/components/WeeklyPlanner.jsx
+  7d7ab68b9e4d0dc1 9-10,21,48-49,51-54,59,64-77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2",
+  "base_commit_sha": "f0b04a3597b9c8678602976b44359f0d8d02f34b",
+  "prompts": {
+    "7d7ab68b9e4d0dc1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "521bbd1c-81c2-4440-a68f-43e38d1eefa0",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "scottmunro",
+      "messages": [],
+      "total_additions": 62,
+      "total_deletions": 78,
+      "accepted_lines": 62,
+      "overriden_lines": 0
+    }
+  }
+}
