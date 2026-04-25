@@ -211,7 +211,7 @@ Example format:
 
   try {
     const response = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent?key=${geminiKey}`,
       { contents: [{ parts: [{ text: prompt }] }] },
       { timeout: 20000 }
     );
@@ -231,10 +231,15 @@ Example format:
 
     res.json({ suggestions });
   } catch (err) {
-    if (err.response?.status === 400) {
-      return res.status(500).json({ error: 'Invalid Gemini API key. Check your GEMINI_KEY value.' });
+    const status = err.response?.status;
+    const geminiMsg = err.response?.data?.error?.message;
+    if (status === 400) {
+      return res.status(500).json({ error: 'Invalid Gemini API key — double-check your GEMINI_KEY.' });
     }
-    res.status(500).json({ error: `Gemini request failed: ${err.message}` });
+    if (status === 429) {
+      return res.status(500).json({ error: 'Rate limit hit. Wait a moment and try again. (Free tier: 15 requests/minute)' });
+    }
+    res.status(500).json({ error: geminiMsg || `Gemini request failed: ${err.message}` });
   }
 });
 
