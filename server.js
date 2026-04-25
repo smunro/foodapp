@@ -1,10 +1,17 @@
+require('dotenv').config();
+
 const express = require('express');
 const cheerio = require('cheerio');
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
+const { createClient } = require('@supabase/supabase-js');
 
-const DATA_FILE = path.join(__dirname, 'data.json');
+// --- Supabase setup ---
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_KEY
+);
 
 const DEFAULT_DATA = {
   weeklyPlan: {},
@@ -13,26 +20,29 @@ const DEFAULT_DATA = {
   manualItems: {},
 };
 
-function loadData() {
-  if (!fs.existsSync(DATA_FILE)) {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(DEFAULT_DATA, null, 2));
-    return DEFAULT_DATA;
-  }
-  try {
-    return JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
-  } catch {
-    return DEFAULT_DATA;
-  }
+async function loadData() {
+  const { data, error } = await supabase
+    .from('app_data')
+    .select('data')
+    .eq('id', 'main')
+    .single();
+
+  if (error || !data) return DEFAULT_DATA;
+  return data.data;
 }
 
-function saveData(data) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+async function saveData(appData) {
+  const { error } = await supabase
+    .from('app_data')
+    .upsert({ id: 'main', data: appData });
+
+  if (error) throw new Error(error.message);
 }
 
+// --- Express setup ---
 const app = express();
 app.use(express.json({ limit: '10mb' }));
 
-// CORS for Vite dev server
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE, OPTIONS');
@@ -43,13 +53,17 @@ app.use((req, res, next) => {
 
 // --- Data endpoints ---
 
-app.get('/api/data', (req, res) => {
-  res.json(loadData());
+app.get('/api/data', async (req, res) => {
+  try {
+    res.json(await loadData());
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
-app.put('/api/data', (req, res) => {
+app.put('/api/data', async (req, res) => {
   try {
-    saveData(req.body);
+    await saveData(req.body);
     res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -69,7 +83,6 @@ function findRecipe(obj) {
   }
   if (typeof obj !== 'object') return null;
   if (obj['@type'] === 'Recipe') return obj;
-  // Handle @type arrays like ["Recipe", "Thing"]
   if (Array.isArray(obj['@type']) && obj['@type'].includes('Recipe')) return obj;
   if (obj['@graph']) return findRecipe(obj['@graph']);
   return null;
@@ -112,7 +125,6 @@ app.get('/api/recipe', async (req, res) => {
       });
     }
 
-    // Normalize image
     let image = '';
     if (recipeData.image) {
       if (typeof recipeData.image === 'string') {
@@ -125,7 +137,6 @@ app.get('/api/recipe', async (req, res) => {
       }
     }
 
-    // Normalize servings
     let servings = recipeData.recipeYield || '';
     if (Array.isArray(servings)) servings = servings[0];
     servings = String(servings).trim();
@@ -156,7 +167,7 @@ app.get('/api/recipe', async (req, res) => {
   }
 });
 
-// Serve built frontend in production (after all /api routes)
+// --- Serve built frontend in production ---
 const distDir = path.join(__dirname, 'dist');
 if (fs.existsSync(distDir)) {
   app.use(express.static(distDir));

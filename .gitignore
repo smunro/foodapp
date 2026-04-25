@@ -3,3 +3,4 @@ dist/
 data.json
 .DS_Store
 *.local
+.env
