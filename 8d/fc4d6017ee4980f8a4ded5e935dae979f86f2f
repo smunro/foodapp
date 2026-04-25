@@ -1,0 +1,33 @@
+Dockerfile
+  7d7ab68b9e4d0dc1 1-10
+.env.example
+  7d7ab68b9e4d0dc1 1-2
+server.js
+  7d7ab68b9e4d0dc1 1-2,8,10-14,23-31,34-39,42,56-61,64,66,170
+fly.toml
+  7d7ab68b9e4d0dc1 1-16
+package.json
+  7d7ab68b9e4d0dc1 11,15
+.gitignore
+  7d7ab68b9e4d0dc1 6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2",
+  "base_commit_sha": "8dfc4d6017ee4980f8a4ded5e935dae979f86f2f",
+  "prompts": {
+    "7d7ab68b9e4d0dc1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "521bbd1c-81c2-4440-a68f-43e38d1eefa0",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "scottmunro",
+      "messages": [],
+      "total_additions": 64,
+      "total_deletions": 22,
+      "accepted_lines": 64,
+      "overriden_lines": 0
+    }
+  }
+}
