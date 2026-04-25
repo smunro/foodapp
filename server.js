@@ -237,9 +237,9 @@ Example format:
       return res.status(500).json({ error: 'Invalid Gemini API key — double-check your GEMINI_KEY.' });
     }
     if (status === 429) {
-      return res.status(500).json({ error: 'Rate limit hit. Wait a moment and try again. (Free tier: 15 requests/minute)' });
+      return res.status(500).json({ error: `Rate limited: ${geminiMsg || 'no details from Gemini'}` });
     }
-    res.status(500).json({ error: geminiMsg || `Gemini request failed: ${err.message}` });
+    res.status(500).json({ error: `${status ?? 'unknown'}: ${geminiMsg || err.message}` });
   }
 });
 
