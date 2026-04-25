@@ -211,7 +211,7 @@ Example format:
 
   try {
     const response = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent?key=${geminiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
       { contents: [{ parts: [{ text: prompt }] }] },
       { timeout: 20000 }
     );
