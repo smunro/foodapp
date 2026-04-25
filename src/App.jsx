@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import WeeklyPlanner from './components/WeeklyPlanner';
 import ShoppingList from './components/ShoppingList';
+import Favorites from './components/Favorites';
 import { fetchData, saveData } from './utils/api';
 import { getWeekStart, toDateKey } from './utils/dates';
 
@@ -9,6 +10,7 @@ const DEFAULT_DATA = {
   recipes: {},
   shoppingOverrides: {},
   manualItems: {},
+  favorites: {},
 };
 
 export default function App() {
@@ -75,6 +77,28 @@ export default function App() {
           },
         },
       }));
+    },
+    [updateData]
+  );
+
+  // --- Favorites operations ---
+
+  const addFavorite = useCallback(
+    (recipe) => {
+      updateData((prev) => ({
+        ...prev,
+        favorites: { ...prev.favorites, [recipe.id]: recipe },
+      }));
+    },
+    [updateData]
+  );
+
+  const removeFavorite = useCallback(
+    (recipeId) => {
+      updateData((prev) => {
+        const { [recipeId]: _, ...rest } = prev.favorites;
+        return { ...prev, favorites: rest };
+      });
     },
     [updateData]
   );
@@ -209,6 +233,12 @@ export default function App() {
             >
               Shopping List
             </button>
+            <button
+              className={`nav-tab ${activeTab === 'favorites' ? 'active' : ''}`}
+              onClick={() => setActiveTab('favorites')}
+            >
+              Favorites
+            </button>
           </nav>
         </div>
       </header>
@@ -222,6 +252,12 @@ export default function App() {
             recipes={data.recipes}
             onAddRecipe={addRecipeToMeal}
             onRemoveRecipe={removeRecipeFromMeal}
+          />
+        ) : activeTab === 'favorites' ? (
+          <Favorites
+            favorites={data.favorites ?? {}}
+            onAdd={addFavorite}
+            onRemove={removeFavorite}
           />
         ) : (
           <ShoppingList
