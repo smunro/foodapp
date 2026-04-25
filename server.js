@@ -27,7 +27,14 @@ async function loadData() {
     .eq('id', 'main')
     .single();
 
-  if (error || !data) return DEFAULT_DATA;
+  if (error) {
+    console.error('[Supabase] loadData error:', error.message, error.code, error.details);
+    return DEFAULT_DATA;
+  }
+  if (!data) {
+    console.warn('[Supabase] loadData: no row found, returning defaults');
+    return DEFAULT_DATA;
+  }
   return data.data;
 }
 
@@ -36,7 +43,10 @@ async function saveData(appData) {
     .from('app_data')
     .upsert({ id: 'main', data: appData });
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error('[Supabase] saveData error:', error.message, error.code, error.details);
+    throw new Error(error.message);
+  }
 }
 
 // --- Express setup ---
@@ -49,6 +59,22 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
+});
+
+// --- Health check ---
+app.get('/api/health', async (req, res) => {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_KEY;
+  if (!url || !key) {
+    return res.status(500).json({ ok: false, error: 'Missing SUPABASE_URL or SUPABASE_KEY env vars' });
+  }
+  try {
+    const { data, error } = await supabase.from('app_data').select('id').limit(1);
+    if (error) return res.status(500).json({ ok: false, error: error.message, code: error.code });
+    res.json({ ok: true, supabaseUrl: url.replace(/^(https:\/\/[^.]+).*/, '$1…'), rows: data?.length ?? 0 });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
 });
 
 // --- Data endpoints ---
