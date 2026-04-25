@@ -87,62 +87,57 @@ input  { font-family: inherit; }
 }
 .this-week-btn:hover { background: var(--primary-light); }
 
-/* ── Weekly planner grid ─────────────────────────────────────── */
-.planner-grid {
-  background: var(--surface); border-radius: var(--radius);
-  border: 1px solid var(--border); overflow: hidden; box-shadow: var(--shadow-sm);
+/* ── Meal sections (new mobile-friendly layout) ──────────────── */
+.meal-sections { display: flex; flex-direction: column; gap: 16px; }
+
+.meal-section {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-sm);
 }
 
-.planner-header-row,
-.planner-meal-row {
-  display: grid;
-  grid-template-columns: 110px repeat(7, minmax(0, 1fr));
-}
-
-.planner-header-row {
-  background: var(--bg);
+.meal-section-heading {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 16px;
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px;
+  color: var(--text-muted); background: var(--bg);
   border-bottom: 1px solid var(--border);
 }
 
-.meal-label-spacer { border-right: 1px solid var(--border); }
+.day-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 8px 14px; min-height: 50px;
+  border-bottom: 1px solid var(--border);
+}
+.day-row:last-child { border-bottom: none; }
+.day-row.today { background: var(--today-bg); }
 
-.day-header {
+.day-row-label {
   display: flex; flex-direction: column; align-items: center;
-  padding: 10px 6px; gap: 2px;
-  border-right: 1px solid var(--border);
+  width: 32px; flex-shrink: 0;
 }
-.day-header:last-child { border-right: none; }
-.day-header.today { background: var(--today-bg); }
-
-.day-name {
-  font-size: 10px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: .6px; color: var(--text-muted);
+.day-row-weekday {
+  font-size: 9px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .5px; color: var(--text-muted);
 }
-.day-date { font-size: 22px; font-weight: 700; line-height: 1; color: var(--text); }
-.day-header.today .day-name,
-.day-header.today .day-date { color: var(--today-accent); }
-
-.planner-meal-row { border-top: 1px solid var(--border); }
-
-.meal-label {
-  display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
-  padding: 10px 8px; gap: 3px;
-  border-right: 1px solid var(--border);
-  background: var(--bg);
+.day-row-date {
+  font-size: 18px; font-weight: 700; line-height: 1.1; color: var(--text);
 }
-.meal-label-emoji { font-size: 16px; }
-.meal-label-text {
-  font-size: 10px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: .5px; color: var(--text-muted); writing-mode: horizontal-tb;
-}
+.day-row.today .day-row-weekday,
+.day-row.today .day-row-date { color: var(--primary); }
 
-/* ── Meal slot ───────────────────────────────────────────────── */
+/* MealSlot inside a day-row: horizontal, no min-height */
+.day-row .meal-slot {
+  flex: 1; flex-direction: row; flex-wrap: wrap;
+  min-height: unset; padding: 0; gap: 5px;
+  border: none; background: none;
+}
+.day-row .meal-slot.today { background: none; }
+
+/* ── Meal slot (standalone styles) ──────────────────────────── */
 .meal-slot {
   display: flex; flex-direction: column; gap: 5px;
   padding: 8px 7px; min-height: 88px;
-  border-right: 1px solid var(--border);
 }
-.meal-slot:last-child { border-right: none; }
 .meal-slot.today { background: var(--today-bg); }
 
 .recipe-chip {
