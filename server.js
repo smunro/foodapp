@@ -61,22 +61,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// --- Health check ---
-app.get('/api/health', async (req, res) => {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_KEY;
-  if (!url || !key) {
-    return res.status(500).json({ ok: false, error: 'Missing SUPABASE_URL or SUPABASE_KEY env vars' });
-  }
-  try {
-    const { data, error } = await supabase.from('app_data').select('id').limit(1);
-    if (error) return res.status(500).json({ ok: false, error: error.message, code: error.code });
-    res.json({ ok: true, supabaseUrl: url.replace(/^(https:\/\/[^.]+).*/, '$1…'), rows: data?.length ?? 0 });
-  } catch (e) {
-    res.status(500).json({ ok: false, error: e.message });
-  }
-});
-
 // --- Data endpoints ---
 
 app.get('/api/data', async (req, res) => {
