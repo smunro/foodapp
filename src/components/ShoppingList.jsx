@@ -1,8 +1,23 @@
 import React, { useState, useMemo } from 'react';
-import { addDays, toDateKey, formatWeekRange, isToday, getWeekStart } from '../utils/dates';
+import { addDays, toDateKey, formatWeekRange, getWeekStart } from '../utils/dates';
 import { groupIngredients } from '../utils/ingredients';
 
 const MEAL_TYPES = ['breakfast', 'lunch', 'dinner'];
+
+function buildExportText(uncheckedItems, uncheckedManual) {
+  const lines = [
+    ...uncheckedItems.map((item) => {
+      // Combine quantities from all sources: "2 cloves + 1 clove garlic"
+      const qtys = item.sources
+        .map((s) => [s.quantity, s.unit].filter(Boolean).join('\u202f'))
+        .filter(Boolean);
+      const qtyStr = qtys.length ? qtys.join(' + ') + ' ' : '';
+      return qtyStr + item.name;
+    }),
+    ...uncheckedManual.map((i) => i.text),
+  ];
+  return lines.join('\n');
+}
 
 export default function ShoppingList({
   weekStart,
@@ -19,6 +34,7 @@ export default function ShoppingList({
 }) {
   const [newItem, setNewItem] = useState('');
   const [showChecked, setShowChecked] = useState(true);
+  const [showSetup, setShowSetup] = useState(false);
 
   // Collect unique recipes for this week
   const recipeIngredients = useMemo(() => {
@@ -57,12 +73,20 @@ export default function ShoppingList({
 
   const totalItems = grouped.length + manualItems.length;
   const totalChecked = checked.length + checkedManual.length;
+  const uncheckedCount = (unchecked.length + uncheckedManual.length);
 
   const handleAdd = () => {
     if (newItem.trim()) {
       onAddManualItem(newItem.trim());
       setNewItem('');
     }
+  };
+
+  const handleExport = () => {
+    const text = buildExportText(unchecked, uncheckedManual);
+    if (!text) return;
+    const url = `shortcuts://run-shortcut?name=Add%20to%20Reminders&input=text&text=${encodeURIComponent(text)}`;
+    window.location.href = url;
   };
 
   return (
@@ -91,11 +115,18 @@ export default function ShoppingList({
               <span className="progress-label-text">
                 {totalChecked} of {totalItems} items checked off
               </span>
-              {totalChecked > 0 && (
-                <button className="uncheck-all-btn" onClick={onClearChecked}>
-                  Uncheck all
-                </button>
-              )}
+              <div className="progress-actions">
+                {totalChecked > 0 && (
+                  <button className="uncheck-all-btn" onClick={onClearChecked}>
+                    Uncheck all
+                  </button>
+                )}
+                {uncheckedCount > 0 && (
+                  <button className="export-btn" onClick={handleExport} title="Export unchecked items to Apple Reminders">
+                    􀊵 Export to Reminders
+                  </button>
+                )}
+              </div>
             </div>
             <div className="progress-bar">
               <div
@@ -169,6 +200,30 @@ export default function ShoppingList({
             </button>
           </div>
         </div>
+
+        {/* Export to Reminders setup instructions */}
+        {totalItems > 0 && (
+          <div className="setup-card">
+            <button className="setup-toggle" onClick={() => setShowSetup((v) => !v)}>
+              <span>{showSetup ? '▾' : '▸'}</span>
+              First time? Set up the iPhone Shortcut
+            </button>
+            {showSetup && (
+              <ol className="setup-steps">
+                <li>On your iPhone, open the <strong>Shortcuts</strong> app</li>
+                <li>Tap <strong>+</strong> to create a new shortcut</li>
+                <li>Tap the name at the top and rename it exactly: <strong>Add to Reminders</strong></li>
+                <li>Tap <strong>Add Action</strong> → search <strong>Split Text</strong> → add it, set Separator to <em>New Lines</em></li>
+                <li>Tap the variable in Split Text and set it to <strong>Shortcut Input</strong></li>
+                <li>Tap <strong>Add Action</strong> → search <strong>Repeat with Each</strong> → add it</li>
+                <li>Inside the repeat block tap <strong>Add Action</strong> → search <strong>Add New Reminder</strong> → add it</li>
+                <li>Tap the reminder text field and select <strong>Repeat Item</strong> from the variables</li>
+                <li>Optionally set the <strong>List</strong> to Groceries (or any list you like)</li>
+                <li>Tap <strong>Done</strong> ✓</li>
+              </ol>
+            )}
+          </div>
+        )}
 
         {/* Checked items (collapsible) */}
         {totalChecked > 0 && (

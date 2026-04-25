@@ -318,14 +318,42 @@ input  { font-family: inherit; }
 }
 .progress-label-row {
   display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 10px; gap: 8px; flex-wrap: wrap;
 }
 .progress-label-text { font-size: 13px; font-weight: 500; color: var(--text-muted); }
+.progress-actions { display: flex; align-items: center; gap: 6px; }
 .uncheck-all-btn {
   background: none; border: none; color: var(--primary);
   font-size: 12px; font-weight: 500; padding: 2px 8px; border-radius: 4px;
 }
 .uncheck-all-btn:hover { background: var(--primary-light); }
+.export-btn {
+  display: flex; align-items: center; gap: 5px;
+  background: #000; color: #fff; border: none;
+  font-size: 12px; font-weight: 600;
+  padding: 5px 11px; border-radius: 20px;
+  transition: background .15s; white-space: nowrap;
+}
+.export-btn:hover { background: #333; }
+
+/* Reminders setup card */
+.setup-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+}
+.setup-toggle {
+  width: 100%; text-align: left; background: none; border: none;
+  padding: 12px 16px; font-size: 13px; font-weight: 500;
+  color: var(--text-muted); display: flex; align-items: center; gap: 8px;
+}
+.setup-toggle:hover { background: var(--bg); color: var(--text); }
+.setup-steps {
+  padding: 0 20px 16px 36px; display: flex; flex-direction: column; gap: 7px;
+  border-top: 1px solid var(--border); padding-top: 12px;
+}
+.setup-steps li { font-size: 13px; line-height: 1.5; color: var(--text-muted); }
+.setup-steps strong { color: var(--text); }
+.setup-steps em { font-style: italic; }
 .progress-bar { height: 7px; background: var(--border); border-radius: 4px; overflow: hidden; }
 .progress-bar-fill {
   height: 100%; background: var(--green); border-radius: 4px;
