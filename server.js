@@ -177,6 +177,67 @@ app.get('/api/recipe', async (req, res) => {
   }
 });
 
+// --- Recipe suggestions via Gemini ---
+
+app.post('/api/suggestions', async (req, res) => {
+  const geminiKey = process.env.GEMINI_KEY;
+  if (!geminiKey) {
+    return res.status(500).json({ error: 'GEMINI_KEY is not configured. Add it as an environment variable.' });
+  }
+
+  const { favorites = [] } = req.body;
+  if (!favorites.length) {
+    return res.status(400).json({ error: 'Add some favorites first so we can tailor suggestions to your taste.' });
+  }
+
+  const recipeList = favorites
+    .map((r) => `- ${r.name}${r.ingredients?.length ? ` (key ingredients: ${r.ingredients.slice(0, 4).join(', ')})` : ''}`)
+    .join('\n');
+
+  const prompt = `You are a culinary assistant helping someone discover new recipes to cook at home.
+
+Based on these recipes they already enjoy:
+${recipeList}
+
+Suggest exactly 10 recipes they would likely love. Consider the cuisines, ingredients, and cooking styles they seem to enjoy.
+
+Return ONLY a valid JSON array — no markdown fences, no explanation, just the raw JSON. Each item must have:
+- "name": the recipe name (string)
+- "description": 1-2 engaging sentences about the dish and why they'd enjoy it based on their taste (string)
+- "keyIngredients": 3-5 key ingredients (array of strings)
+
+Example format:
+[{"name":"...","description":"...","keyIngredients":["...","..."]}]`;
+
+  try {
+    const response = await axios.post(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
+      { contents: [{ parts: [{ text: prompt }] }] },
+      { timeout: 20000 }
+    );
+
+    const raw = response.data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+
+    // Strip any accidental markdown fences
+    const cleaned = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+
+    let suggestions;
+    try {
+      suggestions = JSON.parse(cleaned);
+    } catch {
+      console.error('Gemini response was not valid JSON:', raw);
+      return res.status(500).json({ error: 'Received an unexpected response from Gemini. Try again.' });
+    }
+
+    res.json({ suggestions });
+  } catch (err) {
+    if (err.response?.status === 400) {
+      return res.status(500).json({ error: 'Invalid Gemini API key. Check your GEMINI_KEY value.' });
+    }
+    res.status(500).json({ error: `Gemini request failed: ${err.message}` });
+  }
+});
+
 // --- Serve built frontend in production ---
 const distDir = path.join(__dirname, 'dist');
 if (fs.existsSync(distDir)) {

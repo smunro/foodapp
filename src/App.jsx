@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import WeeklyPlanner from './components/WeeklyPlanner';
 import ShoppingList from './components/ShoppingList';
 import Favorites from './components/Favorites';
+import Discover from './components/Discover';
 import { fetchData, saveData } from './utils/api';
 import { getWeekStart, toDateKey } from './utils/dates';
 
@@ -258,6 +259,12 @@ export default function App() {
             >
               Favorites
             </button>
+            <button
+              className={`nav-tab ${activeTab === 'discover' ? 'active' : ''}`}
+              onClick={() => setActiveTab('discover')}
+            >
+              Discover
+            </button>
           </nav>
         </div>
       </header>
@@ -280,6 +287,8 @@ export default function App() {
             onAdd={addFavorite}
             onRemove={removeFavorite}
           />
+        ) : activeTab === 'discover' ? (
+          <Discover favorites={data.favorites ?? {}} />
         ) : (
           <ShoppingList
             weekStart={weekStart}
