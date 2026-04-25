@@ -103,6 +103,25 @@ export default function App() {
     [updateData]
   );
 
+  // Toggle from meal plan: match by URL so we don't duplicate
+  const toggleFavoriteFromMeal = useCallback(
+    (recipe) => {
+      updateData((prev) => {
+        const favs = prev.favorites ?? {};
+        const existing = Object.values(favs).find(
+          (f) => f.url && f.url === recipe.url
+        );
+        if (existing) {
+          const { [existing.id]: _, ...rest } = favs;
+          return { ...prev, favorites: rest };
+        }
+        const newFav = { ...recipe, id: crypto.randomUUID(), savedAt: new Date().toISOString() };
+        return { ...prev, favorites: { ...favs, [newFav.id]: newFav } };
+      });
+    },
+    [updateData]
+  );
+
   // --- Shopping list operations ---
 
   const weekKey = toDateKey(weekStart);
@@ -252,6 +271,8 @@ export default function App() {
             recipes={data.recipes}
             onAddRecipe={addRecipeToMeal}
             onRemoveRecipe={removeRecipeFromMeal}
+            favorites={data.favorites ?? {}}
+            onToggleFavorite={toggleFavoriteFromMeal}
           />
         ) : activeTab === 'favorites' ? (
           <Favorites

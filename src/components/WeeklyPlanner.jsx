@@ -17,10 +17,16 @@ export default function WeeklyPlanner({
   recipes,
   onAddRecipe,
   onRemoveRecipe,
+  favorites,
+  onToggleFavorite,
 }) {
   const [modal, setModal] = useState(null);
 
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+
+  const favoriteUrls = new Set(
+    Object.values(favorites ?? {}).map((f) => f.url).filter(Boolean)
+  );
 
   const handleModalAdd = (recipe) => {
     if (modal) onAddRecipe(modal.dateKey, modal.mealType, recipe);
@@ -73,6 +79,8 @@ export default function WeeklyPlanner({
                     isToday={today}
                     onAdd={() => setModal({ dateKey, mealType })}
                     onRemove={(id) => onRemoveRecipe(dateKey, mealType, id)}
+                    favoriteUrls={favoriteUrls}
+                    onToggleFavorite={onToggleFavorite}
                   />
                 </div>
               );
