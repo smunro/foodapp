@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { fetchSuggestions } from '../utils/api';
 
 export default function Discover({ favorites }) {
@@ -6,10 +6,22 @@ export default function Discover({ favorites }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [generated, setGenerated] = useState(false);
+  const [cooldown, setCooldown] = useState(0); // seconds remaining
+  const inFlight = useRef(false);
+  const cooldownTimer = useRef(null);
+
+  // Countdown ticker
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    cooldownTimer.current = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(cooldownTimer.current);
+  }, [cooldown]);
 
   const favList = Object.values(favorites);
 
   const handleGenerate = async () => {
+    if (inFlight.current || cooldown > 0) return;
+    inFlight.current = true;
     setLoading(true);
     setError('');
     try {
@@ -19,7 +31,9 @@ export default function Discover({ favorites }) {
     } catch (err) {
       setError(err.message);
     } finally {
+      inFlight.current = false;
       setLoading(false);
+      setCooldown(10); // 10s cooldown after every request
     }
   };
 
@@ -38,10 +52,12 @@ export default function Discover({ favorites }) {
         <button
           className="generate-btn"
           onClick={handleGenerate}
-          disabled={loading || favList.length === 0}
+          disabled={loading || cooldown > 0 || favList.length === 0}
         >
           {loading ? (
             <><span className="spinner" /> Thinking…</>
+          ) : cooldown > 0 ? (
+            `Wait ${cooldown}s…`
           ) : generated ? (
             '↺ Regenerate'
           ) : (
