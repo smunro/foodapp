@@ -144,11 +144,25 @@ If no recipe is present, return: {"hasRecipe":false}
 Caption:
 ${caption}`;
 
-  const geminiResponse = await axios.post(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
-    { contents: [{ parts: [{ text: prompt }] }] },
-    { timeout: 20000 }
-  );
+  let geminiResponse;
+  try {
+    geminiResponse = await axios.post(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
+      { contents: [{ parts: [{ text: prompt }] }] },
+      { timeout: 20000 }
+    );
+  } catch (err) {
+    const status = err.response?.status;
+    const geminiMsg = err.response?.data?.error?.message;
+    if (status === 429) {
+      const e = new Error('Gemini is rate limited — wait a few seconds and try again.');
+      e.status = 429;
+      throw e;
+    }
+    const e = new Error(`Gemini error: ${geminiMsg || err.message}`);
+    e.status = 500;
+    throw e;
+  }
 
   const raw = geminiResponse.data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
   const cleaned = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
@@ -205,7 +219,7 @@ app.get('/api/recipe', async (req, res) => {
       return res.json(recipe);
     } catch (err) {
       const status = err.status || 500;
-      return res.status(status).json({ error: err.message, code: err.code });
+      return res.status(status >= 100 ? status : 500).json({ error: err.message, code: err.code });
     }
   }
 
