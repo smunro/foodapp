@@ -86,46 +86,53 @@ function isInstagramUrl(url) {
   return /instagram\.com\/(reel|p|tv)\//.test(url);
 }
 
-async function fetchInstagramRecipe(url, geminiKey) {
+async function fetchInstagramRecipe(url, providedCaption, geminiKey) {
   if (!geminiKey) {
     const err = new Error('GEMINI_KEY is required to extract recipes from Instagram.');
     err.status = 500;
     throw err;
   }
 
-  let html;
-  try {
-    const response = await axios.get(url, {
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        Accept:
-          'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Cache-Control': 'no-cache',
-      },
-      timeout: 15000,
-      maxRedirects: 3,
-    });
-    html = response.data;
-  } catch (err) {
-    const status = err.response?.status;
-    if (status === 403 || status === 401) {
-      const e = new Error('Could not access this Instagram post — it may be private or Instagram is blocking the request.');
+  let caption = providedCaption.trim();
+  let image = '';
+
+  if (!caption) {
+    let html;
+    try {
+      const response = await axios.get(url, {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          Accept:
+            'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Cache-Control': 'no-cache',
+        },
+        timeout: 15000,
+        maxRedirects: 3,
+      });
+      html = response.data;
+    } catch (err) {
+      const status = err.response?.status;
+      if (status === 403 || status === 401) {
+        const e = new Error('Instagram is blocking this request. Copy the caption from the reel and paste it in the field below.');
+        e.status = 422;
+        e.code = 'INSTAGRAM_PASTE_CAPTION';
+        throw e;
+      }
+      throw err;
+    }
+
+    const $ = cheerio.load(html);
+    caption = $('meta[property="og:description"]').attr('content') || '';
+    image = $('meta[property="og:image"]').attr('content') || '';
+
+    if (!caption.trim()) {
+      const e = new Error('Instagram is blocking this request. Copy the caption from the reel and paste it in the field below.');
       e.status = 422;
+      e.code = 'INSTAGRAM_PASTE_CAPTION';
       throw e;
     }
-    throw err;
-  }
-
-  const $ = cheerio.load(html);
-  const caption = $('meta[property="og:description"]').attr('content') || '';
-  const image = $('meta[property="og:image"]').attr('content') || '';
-
-  if (!caption.trim()) {
-    const e = new Error('Could not read caption from this Instagram post.');
-    e.status = 422;
-    throw e;
   }
 
   const prompt = `The following text is from an Instagram post caption. If it contains a recipe, extract it and generate clear step-by-step cooking instructions from any method hints in the caption.
@@ -194,11 +201,11 @@ app.get('/api/recipe', async (req, res) => {
 
   if (isInstagramUrl(url)) {
     try {
-      const recipe = await fetchInstagramRecipe(url, process.env.GEMINI_KEY);
+      const recipe = await fetchInstagramRecipe(url, req.query.caption || '', process.env.GEMINI_KEY);
       return res.json(recipe);
     } catch (err) {
-      const status = err.status || (err.response?.status === 429 ? 500 : 500);
-      return res.status(status).json({ error: err.message });
+      const status = err.status || 500;
+      return res.status(status).json({ error: err.message, code: err.code });
     }
   }
 

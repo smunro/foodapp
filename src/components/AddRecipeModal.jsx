@@ -3,6 +3,10 @@ import { fetchRecipe } from '../utils/api';
 
 const MEAL_LABELS = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner' };
 
+function isInstagramUrl(url) {
+  return /instagram\.com\/(reel|p|tv)\//.test(url);
+}
+
 export default function AddRecipeModal({
   dateKey,
   mealType,
@@ -11,12 +15,15 @@ export default function AddRecipeModal({
   onClose,
 }) {
   const [url, setUrl] = useState('');
+  const [caption, setCaption] = useState('');
+  const [showCaption, setShowCaption] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [preview, setPreview] = useState(null);
   const [search, setSearch] = useState('');
   const [freeText, setFreeText] = useState('');
   const urlInputRef = useRef(null);
+  const captionRef = useRef(null);
 
   useEffect(() => {
     urlInputRef.current?.focus();
@@ -25,6 +32,19 @@ export default function AddRecipeModal({
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
+  useEffect(() => {
+    if (showCaption) captionRef.current?.focus();
+  }, [showCaption]);
+
+  const handleUrlChange = (e) => {
+    const val = e.target.value;
+    setUrl(val);
+    if (!isInstagramUrl(val)) {
+      setShowCaption(false);
+      setCaption('');
+    }
+  };
+
   const handleFetch = async () => {
     const trimmed = url.trim();
     if (!trimmed) return;
@@ -32,10 +52,16 @@ export default function AddRecipeModal({
     setError('');
     setPreview(null);
     try {
-      const recipe = await fetchRecipe(trimmed);
+      const recipe = await fetchRecipe(trimmed, caption.trim() || undefined);
       setPreview({ ...recipe, id: crypto.randomUUID() });
+      setShowCaption(false);
     } catch (err) {
-      setError(err.message);
+      if (err.code === 'INSTAGRAM_PASTE_CAPTION') {
+        setShowCaption(true);
+        setError('');
+      } else {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -88,21 +114,43 @@ export default function AddRecipeModal({
                 className="url-input"
                 placeholder="https://cooking.nytimes.com/… or an Instagram Reel URL"
                 value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleFetch()}
+                onChange={handleUrlChange}
+                onKeyDown={(e) => e.key === 'Enter' && !showCaption && handleFetch()}
               />
-              <button
-                className="fetch-btn"
-                onClick={handleFetch}
-                disabled={loading || !url.trim()}
-              >
-                {loading ? (
-                  <span className="spinner" />
-                ) : (
-                  'Fetch'
-                )}
-              </button>
+              {!showCaption && (
+                <button
+                  className="fetch-btn"
+                  onClick={handleFetch}
+                  disabled={loading || !url.trim()}
+                >
+                  {loading ? <span className="spinner" /> : 'Fetch'}
+                </button>
+              )}
             </div>
+
+            {showCaption && (
+              <div className="caption-paste-box">
+                <p className="caption-paste-label">
+                  Instagram blocked the request. Open the reel, tap <strong>···</strong> → <strong>Copy caption</strong>, then paste it below:
+                </p>
+                <textarea
+                  ref={captionRef}
+                  className="caption-textarea"
+                  placeholder="Paste the reel caption here…"
+                  value={caption}
+                  onChange={(e) => setCaption(e.target.value)}
+                  rows={5}
+                />
+                <button
+                  className="fetch-btn"
+                  onClick={handleFetch}
+                  disabled={loading || !caption.trim()}
+                >
+                  {loading ? <span className="spinner" /> : 'Extract Recipe'}
+                </button>
+              </div>
+            )}
+
             {error && <p className="fetch-error">{error}</p>}
           </section>
 
