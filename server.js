@@ -86,9 +86,9 @@ function isInstagramUrl(url) {
   return /instagram\.com\/(reel|p|tv)\//.test(url);
 }
 
-async function fetchInstagramRecipe(url, providedCaption, geminiKey) {
-  if (!geminiKey) {
-    const err = new Error('GEMINI_KEY is required to extract recipes from Instagram.');
+async function fetchInstagramRecipe(url, providedCaption, anthropicKey) {
+  if (!anthropicKey) {
+    const err = new Error('ANTHROPIC_API_KEY is not configured. Add it as a Fly secret.');
     err.status = 500;
     throw err;
   }
@@ -144,34 +144,45 @@ If no recipe is present, return: {"hasRecipe":false}
 Caption:
 ${caption}`;
 
-  let geminiResponse;
+  let claudeResponse;
   try {
-    geminiResponse = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
-      { contents: [{ parts: [{ text: prompt }] }] },
-      { timeout: 20000 }
+    claudeResponse = await axios.post(
+      'https://api.anthropic.com/v1/messages',
+      {
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1024,
+        messages: [{ role: 'user', content: prompt }],
+      },
+      {
+        headers: {
+          'x-api-key': anthropicKey,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+        },
+        timeout: 20000,
+      }
     );
   } catch (err) {
     const status = err.response?.status;
-    const geminiMsg = err.response?.data?.error?.message;
+    const claudeMsg = err.response?.data?.error?.message;
     if (status === 429) {
-      const e = new Error('Gemini is rate limited — wait a few seconds and try again.');
+      const e = new Error('Claude is rate limited — wait a few seconds and try again.');
       e.status = 429;
       throw e;
     }
-    const e = new Error(`Gemini error: ${geminiMsg || err.message}`);
+    const e = new Error(`Claude error: ${claudeMsg || err.message}`);
     e.status = 500;
     throw e;
   }
 
-  const raw = geminiResponse.data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+  const raw = claudeResponse.data?.content?.[0]?.text ?? '';
   const cleaned = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
 
   let parsed;
   try {
     parsed = JSON.parse(cleaned);
   } catch {
-    const e = new Error('Received an unexpected response from Gemini. Try again.');
+    const e = new Error('Received an unexpected response from Claude. Try again.');
     e.status = 500;
     throw e;
   }
@@ -215,7 +226,7 @@ app.get('/api/recipe', async (req, res) => {
 
   if (isInstagramUrl(url)) {
     try {
-      const recipe = await fetchInstagramRecipe(url, req.query.caption || '', process.env.GEMINI_KEY);
+      const recipe = await fetchInstagramRecipe(url, req.query.caption || '', process.env.ANTHROPIC_API_KEY);
       return res.json(recipe);
     } catch (err) {
       const status = err.status || 500;
