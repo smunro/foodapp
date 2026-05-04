@@ -425,6 +425,32 @@ input  { font-family: inherit; }
 }
 .fav-card-remove:hover { background: var(--bg); color: var(--text); }
 
+.fav-recipe-detail {
+  border-top: 1px solid var(--border);
+  margin-top: 8px;
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.fav-recipe-servings { font-size: 12px; color: var(--text-muted); }
+.fav-recipe-section { display: flex; flex-direction: column; gap: 4px; }
+.fav-recipe-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+.fav-recipe-list {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.fav-recipe-list li { font-size: 13px; color: var(--text); line-height: 1.5; }
+
 /* ── Shopping list ───────────────────────────────────────────── */
 .shopping-list { max-width: 680px; margin: 0 auto; }
 .shopping-content { display: flex; flex-direction: column; gap: 14px; }

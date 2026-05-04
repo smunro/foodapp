@@ -38,7 +38,7 @@ export default function Favorites({ favorites, onAdd, onRemove }) {
             ref={inputRef}
             type="url"
             className="url-input"
-            placeholder="Paste any recipe URL…"
+            placeholder="Paste any recipe URL or Instagram Reel link…"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSave()}
@@ -76,6 +76,9 @@ export default function Favorites({ favorites, onAdd, onRemove }) {
 }
 
 function FavCard({ recipe, onRemove }) {
+  const [expanded, setExpanded] = useState(false);
+  const hasFullRecipe = recipe.ingredients?.length > 0 || recipe.instructions?.length > 0;
+
   return (
     <div className="fav-card">
       {recipe.image ? (
@@ -104,10 +107,46 @@ function FavCard({ recipe, onRemove }) {
               Open recipe ↗
             </a>
           )}
+          {hasFullRecipe && (
+            <button
+              className="fav-card-link"
+              onClick={() => setExpanded((v) => !v)}
+            >
+              {expanded ? 'Hide recipe' : 'View recipe'}
+            </button>
+          )}
           <button className="fav-card-remove" onClick={onRemove} title="Remove from favorites">
             Remove
           </button>
         </div>
+
+        {expanded && (
+          <div className="fav-recipe-detail">
+            {recipe.servings && (
+              <p className="fav-recipe-servings">Serves {recipe.servings}</p>
+            )}
+            {recipe.ingredients?.length > 0 && (
+              <div className="fav-recipe-section">
+                <p className="fav-recipe-section-title">Ingredients</p>
+                <ul className="fav-recipe-list">
+                  {recipe.ingredients.map((ing, i) => (
+                    <li key={i}>{ing}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {recipe.instructions?.length > 0 && (
+              <div className="fav-recipe-section">
+                <p className="fav-recipe-section-title">Instructions</p>
+                <ol className="fav-recipe-list">
+                  {recipe.instructions.map((step, i) => (
+                    <li key={i}>{step.replace(/^step\s*\d+[:.]\s*/i, '')}</li>
+                  ))}
+                </ol>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
