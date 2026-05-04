@@ -13,10 +13,16 @@ export async function saveData(data) {
   if (!res.ok) throw new Error('Failed to save data');
 }
 
-export async function fetchRecipe(url) {
-  const res = await fetch(`/api/recipe?url=${encodeURIComponent(url)}`);
+export async function fetchRecipe(url, caption) {
+  const params = new URLSearchParams({ url });
+  if (caption) params.set('caption', caption);
+  const res = await fetch(`/api/recipe?${params}`);
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Failed to fetch recipe');
+  if (!res.ok) {
+    const err = new Error(data.error || 'Failed to fetch recipe');
+    err.code = data.code;
+    throw err;
+  }
   return data;
 }
 

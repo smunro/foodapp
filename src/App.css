@@ -425,6 +425,34 @@ input  { font-family: inherit; }
 }
 .fav-card-remove:hover { background: var(--bg); color: var(--text); }
 
+.caption-paste-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+.caption-paste-label {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.caption-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+  background: var(--bg);
+  color: var(--text);
+  box-sizing: border-box;
+}
+.caption-textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
 .fav-recipe-detail {
   border-top: 1px solid var(--border);
   margin-top: 8px;

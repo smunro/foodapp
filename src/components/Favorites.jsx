@@ -1,11 +1,31 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { fetchRecipe } from '../utils/api';
+
+function isInstagramUrl(url) {
+  return /instagram\.com\/(reel|p|tv)\//.test(url);
+}
 
 export default function Favorites({ favorites, onAdd, onRemove }) {
   const [url, setUrl] = useState('');
+  const [caption, setCaption] = useState('');
+  const [showCaption, setShowCaption] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const inputRef = useRef(null);
+  const captionRef = useRef(null);
+
+  useEffect(() => {
+    if (showCaption) captionRef.current?.focus();
+  }, [showCaption]);
+
+  const handleUrlChange = (e) => {
+    const val = e.target.value;
+    setUrl(val);
+    if (!isInstagramUrl(val)) {
+      setShowCaption(false);
+      setCaption('');
+    }
+  };
 
   const handleSave = async () => {
     const trimmed = url.trim();
@@ -13,12 +33,19 @@ export default function Favorites({ favorites, onAdd, onRemove }) {
     setLoading(true);
     setError('');
     try {
-      const recipe = await fetchRecipe(trimmed);
+      const recipe = await fetchRecipe(trimmed, caption.trim() || undefined);
       onAdd({ ...recipe, id: crypto.randomUUID(), savedAt: new Date().toISOString() });
       setUrl('');
+      setCaption('');
+      setShowCaption(false);
       inputRef.current?.focus();
     } catch (err) {
-      setError(err.message);
+      if (err.code === 'INSTAGRAM_PASTE_CAPTION') {
+        setShowCaption(true);
+        setError('');
+      } else {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -40,17 +67,41 @@ export default function Favorites({ favorites, onAdd, onRemove }) {
             className="url-input"
             placeholder="Paste any recipe URL or Instagram Reel link…"
             value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+            onChange={handleUrlChange}
+            onKeyDown={(e) => e.key === 'Enter' && !showCaption && handleSave()}
           />
-          <button
-            className="fetch-btn"
-            onClick={handleSave}
-            disabled={loading || !url.trim()}
-          >
-            {loading ? <span className="spinner" /> : 'Save'}
-          </button>
+          {!showCaption && (
+            <button
+              className="fetch-btn"
+              onClick={handleSave}
+              disabled={loading || !url.trim()}
+            >
+              {loading ? <span className="spinner" /> : 'Save'}
+            </button>
+          )}
         </div>
+        {showCaption && (
+          <div className="caption-paste-box">
+            <p className="caption-paste-label">
+              Instagram blocked the request. Open the reel, tap <strong>···</strong> → <strong>Copy caption</strong>, then paste it below:
+            </p>
+            <textarea
+              ref={captionRef}
+              className="caption-textarea"
+              placeholder="Paste the reel caption here…"
+              value={caption}
+              onChange={(e) => setCaption(e.target.value)}
+              rows={5}
+            />
+            <button
+              className="fetch-btn"
+              onClick={handleSave}
+              disabled={loading || !caption.trim()}
+            >
+              {loading ? <span className="spinner" /> : 'Extract Recipe'}
+            </button>
+          </div>
+        )}
         {error && <p className="fetch-error">{error}</p>}
       </div>
 
