@@ -82,6 +82,96 @@ app.put('/api/data', async (req, res) => {
 
 // --- Recipe fetching ---
 
+function isInstagramUrl(url) {
+  return /instagram\.com\/(reel|p|tv)\//.test(url);
+}
+
+async function fetchInstagramRecipe(url, geminiKey) {
+  if (!geminiKey) {
+    const err = new Error('GEMINI_KEY is required to extract recipes from Instagram.');
+    err.status = 500;
+    throw err;
+  }
+
+  let html;
+  try {
+    const response = await axios.get(url, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        Accept:
+          'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Cache-Control': 'no-cache',
+      },
+      timeout: 15000,
+      maxRedirects: 3,
+    });
+    html = response.data;
+  } catch (err) {
+    const status = err.response?.status;
+    if (status === 403 || status === 401) {
+      const e = new Error('Could not access this Instagram post — it may be private or Instagram is blocking the request.');
+      e.status = 422;
+      throw e;
+    }
+    throw err;
+  }
+
+  const $ = cheerio.load(html);
+  const caption = $('meta[property="og:description"]').attr('content') || '';
+  const image = $('meta[property="og:image"]').attr('content') || '';
+
+  if (!caption.trim()) {
+    const e = new Error('Could not read caption from this Instagram post.');
+    e.status = 422;
+    throw e;
+  }
+
+  const prompt = `The following text is from an Instagram post caption. If it contains a recipe, extract it and generate clear step-by-step cooking instructions from any method hints in the caption.
+Return ONLY valid JSON (no markdown fences, no explanation) in this exact format:
+{"hasRecipe":true,"name":"...","description":"...","servings":"...","ingredients":["..."],"instructions":["Step 1: ...","Step 2: ..."]}
+
+If no recipe is present, return: {"hasRecipe":false}
+
+Caption:
+${caption}`;
+
+  const geminiResponse = await axios.post(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
+    { contents: [{ parts: [{ text: prompt }] }] },
+    { timeout: 20000 }
+  );
+
+  const raw = geminiResponse.data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+  const cleaned = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+
+  let parsed;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch {
+    const e = new Error('Received an unexpected response from Gemini. Try again.');
+    e.status = 500;
+    throw e;
+  }
+
+  if (!parsed.hasRecipe) {
+    const e = new Error("No recipe found in this Instagram reel's caption.");
+    e.status = 422;
+    throw e;
+  }
+
+  return {
+    name: String(parsed.name || 'Instagram Recipe').trim(),
+    url,
+    image,
+    description: String(parsed.description || '').trim(),
+    servings: String(parsed.servings || '').trim(),
+    ingredients: (parsed.ingredients || []).filter((s) => s && s.trim()),
+    instructions: (parsed.instructions || []).filter((s) => s && s.trim()),
+  };
+}
+
 function findRecipe(obj) {
   if (!obj) return null;
   if (Array.isArray(obj)) {
@@ -101,6 +191,16 @@ function findRecipe(obj) {
 app.get('/api/recipe', async (req, res) => {
   const { url } = req.query;
   if (!url) return res.status(400).json({ error: 'URL is required' });
+
+  if (isInstagramUrl(url)) {
+    try {
+      const recipe = await fetchInstagramRecipe(url, process.env.GEMINI_KEY);
+      return res.json(recipe);
+    } catch (err) {
+      const status = err.status || (err.response?.status === 429 ? 500 : 500);
+      return res.status(status).json({ error: err.message });
+    }
+  }
 
   try {
     const response = await axios.get(url, {

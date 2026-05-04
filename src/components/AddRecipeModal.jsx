@@ -86,7 +86,7 @@ export default function AddRecipeModal({
                 ref={urlInputRef}
                 type="url"
                 className="url-input"
-                placeholder="https://cooking.nytimes.com/recipes/…"
+                placeholder="https://cooking.nytimes.com/… or an Instagram Reel URL"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleFetch()}
